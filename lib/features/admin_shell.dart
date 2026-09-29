@@ -1,4 +1,5 @@
 import 'resource_usage_page.dart';
+import 'broadcast_page.dart';
 import 'app_releases_page.dart';
 import 'resource_admin_page.dart';
 import 'jieyuan_admin_page.dart';
@@ -44,6 +45,7 @@ class _AdminShellState extends State<AdminShell> {
     '公共网盘',
     '用户资源用量',
     'App版本',
+    '群发文件',
     '系统设置',
     '后台发布笔记',
     '关于与联系',
@@ -63,6 +65,7 @@ class _AdminShellState extends State<AdminShell> {
             '公共网盘',
             '用户资源用量',
             'App版本',
+            '群发文件',
           ].contains(name)) ||
       (role == 'moderator' && ['论坛', '结缘管理'].contains(name));
   String get roleName => switch (role) {
@@ -342,6 +345,7 @@ class _AdminShellState extends State<AdminShell> {
     '藏历' => CalendarContentPage(api: api),
     '用户资源用量' => ResourceUsagePage(api: api),
     'App版本' => AppReleasesPage(api: api),
+    '群发文件' => BroadcastPage(api: api),
     '公共网盘' => ResourceAdminPage(api: api),
     '结缘管理' => JieyuanAdminPage(api: api),
     '群聊管理' => ChatAdminPage(api: api),

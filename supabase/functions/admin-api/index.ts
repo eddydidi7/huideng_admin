@@ -4,6 +4,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const actions = new Set(["releases.list", "releases.save", "releases.notify", "usage.list", "usage.detail", "usage.save", "usage.warn", "usage.hide", "usage.ban", "resources.list", "resources.settings", "resources.delete", "jieyuan.get", "jieyuan.save", "jieyuan.level", "jieyuan.moderate", "me", "dashboard", "forum.list", "articles.list", "users.list", "notices.list", "notices.save", "notices.delete", "links.get", "links.save", "members.list", "members.save", "assets.upload", "chat.list", "chat.members", "chat.limit", "chat.remove", "connection.get", "connection.publish"]);
 const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), {status, headers: {"Content-Type": "application/json", "Cache-Control": "no-store"}});
 for (const action of ['catalog', 'get', 'states', 'audit', 'freeze', 'restore']) actions.add(`permissions.${action}`);
+// huideng_admin_broadcast (huideng_counter repo, 202609290076_admin_broadcast.sql).
+for (const action of ['send', 'list', 'detail', 'levels.get', 'levels.set']) actions.add(`broadcast.${action}`);
 Deno.serve(async (req) => {
   if (req.method !== "POST") return reply(405, {ok: false});
   const auth = req.headers.get("Authorization");
@@ -47,6 +49,19 @@ Deno.serve(async (req) => {
         return reply(status, {ok: false});
       }
       return reply(200, {ok: true, data: action === 'audit' ? {items: data} : data});
+    }
+    if (input.action.startsWith('broadcast.')) {
+      const action = input.action.slice('broadcast.'.length);
+      const {data, error} = await client.rpc('huideng_admin_broadcast', {
+        actor: identity.user.id, action, payload: input.payload, request_id: input.request_id,
+      });
+      if (error) {
+        const status = error.code === '42501' ? 403
+          : error.code === '40001' ? 409
+          : ['22023','22P02','23514','22007','22008','23503'].includes(error.code) ? 400 : 500;
+        return reply(status, {ok: false});
+      }
+      return reply(200, {ok: true, data});
     }
     if(input.action.startsWith('usage.')) {
       const {data,error}=await client.rpc('huideng_admin_usage',{actor:identity.user.id,action:input.action,payload:input.payload,request_id:input.request_id});

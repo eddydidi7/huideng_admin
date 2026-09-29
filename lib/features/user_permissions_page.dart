@@ -23,6 +23,8 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
   bool busy = false;
   String? error;
   Timer? refresh;
+  int? broadcastLevel;
+  bool levelBusy = false;
   List<Map<String, dynamic>> get permissions =>
       (state?['permissions'] as List? ?? [])
           .cast<Map>()
@@ -36,7 +38,34 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
   void initState() {
     super.initState();
     load();
+    loadBroadcastLevel();
     refresh = Timer.periodic(const Duration(seconds: 30), (_) => load());
+  }
+
+  Future<void> loadBroadcastLevel() async {
+    try {
+      final result = await widget.api.call('broadcast.levels.get', {
+        'user_id': widget.user['id'],
+      });
+      if (mounted) setState(() => broadcastLevel = (result['level'] as num).toInt());
+    } catch (_) {
+      // Broadcast feature may not be deployed yet; leave the picker hidden.
+    }
+  }
+
+  Future<void> setBroadcastLevel(int level) async {
+    setState(() => levelBusy = true);
+    try {
+      await widget.api.call('broadcast.levels.set', {
+        'user_id': widget.user['id'],
+        'level': level,
+      });
+      if (mounted) setState(() => broadcastLevel = level);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => levelBusy = false);
+    }
   }
 
   @override
@@ -182,6 +211,29 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
             '个人号：${widget.user['personal_number'] ?? '未生成'}\n用户 ID：${widget.user['id']}\n${permissionStatus(state?['status'])}',
           ),
         ),
+        if (broadcastLevel != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                const Text('群发等级：'),
+                DropdownButton<int>(
+                  value: broadcastLevel,
+                  items: [
+                    for (var i = 1; i <= 5; i++)
+                      DropdownMenuItem(value: i, child: Text('$i 级')),
+                  ],
+                  onChanged: levelBusy
+                      ? null
+                      : (v) {
+                          if (v != null) setBroadcastLevel(v);
+                        },
+                ),
+                const SizedBox(width: 8),
+                const Text('用于"群发文件"按等级发送', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
         Wrap(
           spacing: 8,
           children: [

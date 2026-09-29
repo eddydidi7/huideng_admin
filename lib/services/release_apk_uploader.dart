@@ -11,7 +11,11 @@ class ReleaseApkUploader {
   ReleaseApkUploader(this.client, this.baseUrl);
   final String baseUrl;
   final SupabaseClient client;
-  Future<String> upload(ApkMetadata apk, void Function(double) progress) async {
+  Future<String> upload(
+    ApkMetadata apk,
+    void Function(double) progress, {
+    String mimeType = 'application/vnd.android.package-archive',
+  }) async {
     final owner = client.auth.currentUser?.id;
     if (owner == null) throw StateError('请先登录');
     void guard() {
@@ -63,7 +67,7 @@ class ReleaseApkUploader {
       'upload_protocol': 'tus',
       'upload_id': id,
       'file_name': task.name,
-      'mime_type': 'application/vnd.android.package-archive',
+      'mime_type': mimeType,
       'file_size': apk.size,
       'checksum': apk.hash,
       'category': task.category,

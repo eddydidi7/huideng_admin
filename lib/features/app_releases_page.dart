@@ -77,6 +77,7 @@ class _AppReleasesPageState extends State<AppReleasesPage> {
     bool published = row?['is_published'] == true,
         force = row?['force_update'] == true,
         saving = false;
+    String platform = row?['platform'] as String? ?? 'android';
     String? failure;
     final policies = <String, bool>{
       'updates_enabled': row?['updates_enabled'] != false,
@@ -215,6 +216,23 @@ class _AppReleasesPageState extends State<AppReleasesPage> {
                     if (phase.isNotEmpty) Text(phase),
                     if (saving) LinearProgressIndicator(value: progress),
                     const Text('选择后会上传到公共网盘；版本记录仍需点击保存。测试签名包不要开启正式发布。'),
+                    DropdownButtonFormField<String>(
+                      initialValue: platform,
+                      decoration: const InputDecoration(labelText: '平台'),
+                      items: const [
+                        DropdownMenuItem(value: 'android', child: Text('Android')),
+                        DropdownMenuItem(value: 'windows', child: Text('Windows')),
+                        DropdownMenuItem(value: 'ios', child: Text('iOS')),
+                      ],
+                      // versionCode is a single global sequence shared by every
+                      // platform (see 202609290077_app_releases_platform.sql):
+                      // switching platform after a versionCode has been saved
+                      // would silently retarget which devices see this row.
+                      onChanged: saving || row != null
+                          ? null
+                          : (v) => setDialog(() => platform = v ?? platform),
+                    ),
+                    const SizedBox(height: 10),
                     for (final e in fields.entries)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -296,6 +314,7 @@ class _AppReleasesPageState extends State<AppReleasesPage> {
                           final data = <String, dynamic>{
                             for (final e in fields.entries)
                               e.key: e.value.text.trim(),
+                            'platform': platform,
                             'version_code': int.parse(
                               fields['version_code']!.text,
                             ),
@@ -380,7 +399,10 @@ class _AppReleasesPageState extends State<AppReleasesPage> {
       for (final row in rows)
         Card(
           child: ListTile(
-            title: Text('${row['version_name']} (${row['version_code']})'),
+            title: Text(
+              '[${(row['platform'] as String? ?? 'android').toUpperCase()}] '
+              '${row['version_name']} (${row['version_code']})',
+            ),
             subtitle: Text(
               '${row['is_published'] == true ? '正式发布' : '未发布'} · ${row['notified_at'] == null ? '未通知' : '已通知'}\n${row['release_notes']}',
             ),
