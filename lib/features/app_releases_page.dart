@@ -342,6 +342,32 @@ class _AppReleasesPageState extends State<AppReleasesPage> {
                               '版本已保存，但服务端尚未支持更新策略；请部署 084 迁移后重新保存。',
                             );
                           }
+                          // Read back through the exact same public RPC
+                          // Android/Windows call, so "已保存/已发布" is never
+                          // shown unless a real client would actually see
+                          // this version too (catches 正式发布=off, a
+                          // 发布时间 that is still in the future, or any
+                          // other server-side gate this dialog doesn't know
+                          // about).
+                          final api = widget.api;
+                          if (published && api is SupabaseAdminApi) {
+                            setDialog(() => phase = '正在核实客户端接口是否已返回新版本…');
+                            final check = await api.client.rpc(
+                              'latest_app_version',
+                              params: {'p_platform': platform},
+                            );
+                            final liveCode = check is Map
+                                ? check['version_code']
+                                : null;
+                            if (liveCode != data['version_code']) {
+                              throw StateError(
+                                '发布失败：客户端版本接口仍未返回新版本'
+                                '（接口当前返回 versionCode=${liveCode ?? '无'}，'
+                                '期望 ${data['version_code']}）。'
+                                '请检查“正式发布”开关和发布时间是否已到。',
+                              );
+                            }
+                          }
                           if (ctx.mounted) Navigator.pop(ctx);
                         } catch (e) {
                           setDialog(() {
